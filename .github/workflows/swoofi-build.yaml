@@ -9,26 +9,33 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
 
-      - name: Setup Flutter
+    steps:
+      # 1. Repository checkout
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Flutter setup
+      - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.22.0'
 
-      - name: Create Android project structure
-        run: flutter create .
-
+      # 3. Dependencies get
       - name: Install dependencies
         run: flutter pub get
 
+      # 4. Create android folder if empty
+      - name: Ensure android folder exists
+        run: flutter create .
+
+      # 5. Build APK (release mode)
       - name: Build release APK
         run: flutter build apk --release
 
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v3
+      # 6. Upload build artifact (APK)
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
         with:
           name: swoofi-apk
           path: build/app/outputs/flutter-apk/app-release.apk
