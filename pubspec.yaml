@@ -1,4 +1,4 @@
-name: swoofi_demo
+name: swoofi_build1
 description: Swoofi testing app with admin & user profiles
 publish_to: 'none'
 version: 1.0.0+1
