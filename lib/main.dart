@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/gestures.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   runApp(SwoofiApp());
@@ -11,25 +11,18 @@ class SwoofiApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Swoofi',
       debugShowCheckedModeBanner: false,
+      title: 'Swoofi Support App',
       theme: ThemeData(
+        brightness: Brightness.light,
         primaryColor: Color(0xFF9C27B0),
-        scaffoldBackgroundColor: Colors.white,
-        appBarTheme: AppBarTheme(
-          backgroundColor: Colors.white,
-          foregroundColor: Color(0xFF9C27B0),
-          elevation: 1,
-          titleTextStyle: TextStyle(
-            color: Color(0xFF9C27B0),
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
-          ),
+        colorScheme: ColorScheme.light(
+          primary: Color(0xFF9C27B0),
+          secondary: Color(0xFFE1BEE7),
         ),
-        bottomNavigationBarTheme: BottomNavigationBarThemeData(
-          backgroundColor: Colors.white,
-          selectedItemColor: Color(0xFF9C27B0),
-          unselectedItemColor: Colors.grey,
+        appBarTheme: AppBarTheme(
+          backgroundColor: Color(0xFF9C27B0),
+          foregroundColor: Colors.white,
         ),
       ),
       home: SplashScreen(),
@@ -37,6 +30,9 @@ class SwoofiApp extends StatelessWidget {
   }
 }
 
+//////////////////////////////////////
+// Splash Screen
+//////////////////////////////////////
 class SplashScreen extends StatefulWidget {
   @override
   _SplashScreenState createState() => _SplashScreenState();
@@ -46,10 +42,10 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    Future.delayed(Duration(seconds: 3), () {
+    Future.delayed(Duration(seconds: 2), () {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => MainPage()),
+        MaterialPageRoute(builder: (_) => HomeScreen()),
       );
     });
   }
@@ -57,21 +53,22 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: Center(
+      body: Container(
+        color: Colors.white,
+        alignment: Alignment.center,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.flash_on, size: 80, color: Color(0xFF9C27B0)), // Replace with logo asset
+            Icon(Icons.bubble_chart, size: 80, color: Color(0xFF9C27B0)),
             SizedBox(height: 20),
             Text("Swoofi",
                 style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF9C27B0))),
-            SizedBox(height: 10),
-            Text("Connecting Creators, Inspiring Futures",
-                style: TextStyle(color: Colors.grey)),
+            SizedBox(height: 8),
+            Text("Connecting Creators • Inspiring Growth",
+                style: TextStyle(fontSize: 14, color: Colors.black54)),
           ],
         ),
       ),
@@ -79,40 +76,16 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 }
 
-class MainPage extends StatefulWidget {
-  @override
-  _MainPageState createState() => _MainPageState();
-}
-
-class _MainPageState extends State<MainPage> {
-  int _currentIndex = 0;
-  final List<Widget> _pages = [HomeScreen(), SocialPage(), WebsitePage(), RateUsPage()];
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: _pages[_currentIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) => setState(() => _currentIndex = index),
-        items: [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
-          BottomNavigationBarItem(icon: Icon(Icons.people), label: "Social"),
-          BottomNavigationBarItem(icon: Icon(Icons.public), label: "Website"),
-          BottomNavigationBarItem(icon: Icon(Icons.star), label: "Rate Us"),
-        ],
-      ),
-    );
-  }
-}
-
-// ================= HOME SCREEN =================
+//////////////////////////////////////
+// Home Screen
+//////////////////////////////////////
 class HomeScreen extends StatefulWidget {
   @override
   _HomeScreenState createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  int _selectedIndex = 0;
   List<Map<String, dynamic>> profiles = [];
 
   @override
@@ -123,133 +96,184 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadProfiles() async {
     final prefs = await SharedPreferences.getInstance();
-    String? data = prefs.getString("profiles");
-    if (data != null) {
-      setState(() {
-        profiles = List<Map<String, dynamic>>.from(jsonDecode(data));
-      });
-    }
+    final saved = prefs.getStringList("profiles") ?? [];
+    setState(() {
+      profiles = saved.map((e) => Map<String, dynamic>.fromUri(Uri.parse(e))).toList();
+    });
   }
 
   Future<void> _saveProfiles() async {
     final prefs = await SharedPreferences.getInstance();
-    prefs.setString("profiles", jsonEncode(profiles));
-  }
-
-  void _openAdminLogin() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        TextEditingController userCtrl = TextEditingController();
-        TextEditingController passCtrl = TextEditingController();
-        return AlertDialog(
-          title: Text("Admin Login"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(controller: userCtrl, decoration: InputDecoration(labelText: "Username")),
-              TextField(controller: passCtrl, decoration: InputDecoration(labelText: "Password"), obscureText: true),
-            ],
-          ),
-          actions: [
-            TextButton(
-              child: Text("Cancel"),
-              onPressed: () => Navigator.pop(context),
-            ),
-            ElevatedButton(
-              child: Text("Login"),
-              onPressed: () {
-                if (userCtrl.text == "Manii@2022" && passCtrl.text == "Piyush@2009") {
-                  Navigator.pop(context);
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => AdminPanel(profiles, _updateProfiles)));
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Invalid credentials")));
-                }
-              },
-            ),
-          ],
-        );
-      },
+    prefs.setStringList(
+      "profiles",
+      profiles.map((e) => Uri(queryParameters: e).toString()).toList(),
     );
   }
 
-  void _updateProfiles(List<Map<String, dynamic>> updated) {
-    setState(() => profiles = updated);
+  void _addProfile(Map<String, dynamic> profile) {
+    if (profiles.length >= 10) return;
+    setState(() {
+      profiles.add(profile);
+    });
     _saveProfiles();
+  }
+
+  void _editProfile(int index, Map<String, dynamic> profile) {
+    setState(() {
+      profiles[index] = profile;
+    });
+    _saveProfiles();
+  }
+
+  void _deleteProfile(int index) {
+    setState(() {
+      profiles.removeAt(index);
+    });
+    _saveProfiles();
+  }
+
+  final List<Widget> _pages = [];
+
+  void _onTabTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
+
+  Future<void> _launchLink(String url) async {
+    if (await canLaunchUrl(Uri.parse(url))) {
+      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final userPages = [
+      ProfileListPage(profiles: profiles, onRefresh: _loadProfiles),
+      WebsitePage(),
+      RateUsPage(),
+    ];
     return Scaffold(
       appBar: AppBar(
-        title: GestureDetector(
-          onTap: () async {
-            final url = Uri.parse("https://swoofi.app");
-            if (await canLaunchUrl(url)) launchUrl(url);
-          },
-          child: RichText(
-            text: TextSpan(
-              style: TextStyle(color: Colors.black),
-              children: [
-                TextSpan(
-                    text: "ALL RIGHTS RESERVED TO ",
-                    style: TextStyle(color: Colors.black)),
-                TextSpan(
-                    text: "@myswoofi ",
-                    style: TextStyle(color: Color(0xFF9C27B0)),
-                    recognizer: TapGestureRecognizer()
-                      ..onTap = () async {
-                        final url = Uri.parse("https://instagram.com/myswoofi");
-                        if (await canLaunchUrl(url)) launchUrl(url);
-                      }),
-                TextSpan(
-                    text: "or ",
-                    style: TextStyle(color: Colors.black)),
-                TextSpan(
-                    text: "Swoofi.app",
-                    style: TextStyle(color: Color(0xFF9C27B0)),
-                    recognizer: TapGestureRecognizer()
-                      ..onTap = () async {
-                        final url = Uri.parse("https://swoofi.app");
-                        if (await canLaunchUrl(url)) launchUrl(url);
-                      }),
-              ],
+        title: Text("Swoofi Support App"),
+        centerTitle: true,
+        actions: [
+          IconButton(
+            icon: Icon(Icons.settings),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => AdminLoginPage(
+                    profiles: profiles,
+                    onAdd: _addProfile,
+                    onEdit: _editProfile,
+                    onDelete: _deleteProfile,
+                  ),
+                ),
+              ).then((_) => _loadProfiles());
+            },
+          )
+        ],
+      ),
+      body: Column(
+        children: [
+          Container(
+            padding: EdgeInsets.all(8),
+            color: Colors.black12,
+            child: RichText(
+              text: TextSpan(
+                style: TextStyle(color: Colors.black),
+                children: [
+                  TextSpan(text: "ALL RIGHTS RESERVED TO "),
+                  TextSpan(
+                      text: "@myswoofi",
+                      style: TextStyle(
+                          color: Color(0xFF9C27B0),
+                          fontWeight: FontWeight.bold),
+                      recognizer: TapGestureRecognizer()
+                        ..onTap =
+                            () => _launchLink("https://instagram.com/myswoofi")),
+                  TextSpan(text: " or "),
+                  TextSpan(
+                      text: "Swoofi.app",
+                      style: TextStyle(
+                          color: Color(0xFF9C27B0),
+                          fontWeight: FontWeight.bold),
+                      recognizer: TapGestureRecognizer()
+                        ..onTap = () => _launchLink("https://swoofi.app")),
+                ],
+              ),
             ),
           ),
-        ),
-        actions: [IconButton(icon: Icon(Icons.settings), onPressed: _openAdminLogin)],
+          Expanded(child: userPages[_selectedIndex]),
+        ],
       ),
-      body: ListView.builder(
-        itemCount: profiles.length,
-        itemBuilder: (context, index) {
-          final profile = profiles[index];
-          return Card(
-            margin: EdgeInsets.all(8),
-            child: ListTile(
-              title: Text(profile["name"] ?? "Unnamed"),
-              subtitle: Text("Tap to view details"),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => ProfileDetailPage(profile)),
-                );
-              },
-            ),
-          );
-        },
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _selectedIndex,
+        onTap: _onTabTapped,
+        selectedItemColor: Color(0xFF9C27B0),
+        items: const [
+          BottomNavigationBarItem(
+              icon: Icon(Icons.people), label: "Profiles"),
+          BottomNavigationBarItem(icon: Icon(Icons.language), label: "Website"),
+          BottomNavigationBarItem(icon: Icon(Icons.star), label: "Rate Us"),
+        ],
       ),
     );
   }
 }
 
-// =============== PROFILE DETAIL =================
-class ProfileDetailPage extends StatelessWidget {
-  final Map<String, dynamic> profile;
-  ProfileDetailPage(this.profile);
+//////////////////////////////////////
+// Profile List + Details
+//////////////////////////////////////
+class ProfileListPage extends StatelessWidget {
+  final List<Map<String, dynamic>> profiles;
+  final VoidCallback onRefresh;
+
+  ProfileListPage({required this.profiles, required this.onRefresh});
 
   @override
   Widget build(BuildContext context) {
-    List<dynamic> entries = profile["entries"] ?? [];
+    if (profiles.isEmpty) {
+      return Center(child: Text("No profiles added yet"));
+    }
+    return ListView.builder(
+      itemCount: profiles.length,
+      itemBuilder: (_, i) {
+        final p = profiles[i];
+        return ListTile(
+          title: Text(p["name"] ?? "Unnamed"),
+          subtitle: Text(p["dailyPost"]?.isNotEmpty == true
+              ? "Daily Post Available"
+              : "Links aren't set by admin yet"),
+          trailing: Icon(Icons.arrow_forward_ios),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ProfileDetailPage(profile: p),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class ProfileDetailPage extends StatelessWidget {
+  final Map<String, dynamic> profile;
+  ProfileDetailPage({required this.profile});
+
+  Future<void> _launchLink(String url) async {
+    if (await canLaunchUrl(Uri.parse(url))) {
+      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text(profile["name"] ?? "Profile")),
       body: Padding(
@@ -257,26 +281,29 @@ class ProfileDetailPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("Daily Post Link:", style: TextStyle(fontWeight: FontWeight.bold)),
-            profile["postLink"] != null && profile["postLink"].toString().isNotEmpty
+            Text("Daily Post Link:",
+                style: TextStyle(fontWeight: FontWeight.bold)),
+            SizedBox(height: 5),
+            profile["dailyPost"]?.isNotEmpty == true
                 ? InkWell(
-                    child: Text(profile["postLink"], style: TextStyle(color: Color(0xFF9C27B0))),
-                    onTap: () async {
-                      final url = Uri.parse(profile["postLink"]);
-                      if (await canLaunchUrl(url)) launchUrl(url);
-                    },
+                    child: Text(profile["dailyPost"],
+                        style: TextStyle(color: Colors.blue)),
+                    onTap: () => _launchLink(profile["dailyPost"]),
                   )
                 : Text("Links aren't set by admin yet"),
             SizedBox(height: 20),
-            Text("Latest Month Contest Entries:", style: TextStyle(fontWeight: FontWeight.bold)),
-            ...entries.map((e) => InkWell(
-                  child: Text("• ${e["title"]} (As on ${e["date"]})",
-                      style: TextStyle(color: Color(0xFF9C27B0))),
-                  onTap: () async {
-                    final url = Uri.parse(e["link"]);
-                    if (await canLaunchUrl(url)) launchUrl(url);
-                  },
-                )),
+            Text("Latest Month Contest Entry:",
+                style: TextStyle(fontWeight: FontWeight.bold)),
+            for (int i = 1; i <= 8; i++)
+              if ((profile["contest$i"] ?? "").isNotEmpty)
+                ListTile(
+                  leading: Text("$i."),
+                  title: InkWell(
+                    child: Text(profile["contest$i"],
+                        style: TextStyle(color: Colors.blue)),
+                    onTap: () => _launchLink(profile["contest$i"]),
+                  ),
+                ),
           ],
         ),
       ),
@@ -284,95 +311,217 @@ class ProfileDetailPage extends StatelessWidget {
   }
 }
 
-// ================= ADMIN PANEL =================
-class AdminPanel extends StatefulWidget {
-  final List<Map<String, dynamic>> profiles;
-  final Function(List<Map<String, dynamic>>) onSave;
-
-  AdminPanel(this.profiles, this.onSave);
-
-  @override
-  _AdminPanelState createState() => _AdminPanelState();
-}
-
-class _AdminPanelState extends State<AdminPanel> {
-  late List<Map<String, dynamic>> profiles;
-
-  @override
-  void initState() {
-    super.initState();
-    profiles = List<Map<String, dynamic>>.from(widget.profiles);
-  }
-
-  void _addProfile() {
-    if (profiles.length >= 10) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Max 10 profiles allowed")));
-      return;
+//////////////////////////////////////
+// Website Page
+//////////////////////////////////////
+class WebsitePage extends StatelessWidget {
+  final String website = "https://swoofi.app";
+  Future<void> _launchLink(String url) async {
+    if (await canLaunchUrl(Uri.parse(url))) {
+      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
     }
-    Navigator.push(context, MaterialPageRoute(builder: (_) => ProfileForm(onSave: (profile) {
-          setState(() {
-            profiles.add(profile);
-          });
-          widget.onSave(profiles);
-        })));
   }
 
-  void _editProfile(int index) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => ProfileForm(
-          profile: profiles[index],
-          onSave: (updated) {
-            setState(() {
-              profiles[index] = updated;
-            });
-            widget.onSave(profiles);
-          },
-        ),
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(backgroundColor: Color(0xFF9C27B0)),
+        onPressed: () => _launchLink(website),
+        child: Text("Visit Website", style: TextStyle(color: Colors.white)),
       ),
     );
   }
+}
 
-  void _deleteProfile(int index) {
-    setState(() {
-      profiles.removeAt(index);
-    });
-    widget.onSave(profiles);
+//////////////////////////////////////
+// Rate Us Page (internal)
+//////////////////////////////////////
+class RateUsPage extends StatefulWidget {
+  @override
+  _RateUsPageState createState() => _RateUsPageState();
+}
+
+class _RateUsPageState extends State<RateUsPage> {
+  double rating = 0;
+  final TextEditingController feedbackCtrl = TextEditingController();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        children: [
+          Text("Rate Us", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          SizedBox(height: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(5, (i) {
+              return IconButton(
+                icon: Icon(
+                  i < rating ? Icons.star : Icons.star_border,
+                  color: Colors.amber,
+                  size: 32,
+                ),
+                onPressed: () {
+                  setState(() {
+                    rating = i + 1.0;
+                  });
+                },
+              );
+            }),
+          ),
+          SizedBox(height: 20),
+          TextField(
+            controller: feedbackCtrl,
+            decoration: InputDecoration(
+              border: OutlineInputBorder(),
+              hintText: "Write your feedback...",
+            ),
+            maxLines: 3,
+          ),
+          SizedBox(height: 20),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Color(0xFF9C27B0)),
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text("Thanks for your feedback!")),
+              );
+            },
+            child: Text("Submit", style: TextStyle(color: Colors.white)),
+          )
+        ],
+      ),
+    );
   }
+}
+
+//////////////////////////////////////
+// Admin Panel
+//////////////////////////////////////
+class AdminLoginPage extends StatefulWidget {
+  final List<Map<String, dynamic>> profiles;
+  final Function(Map<String, dynamic>) onAdd;
+  final Function(int, Map<String, dynamic>) onEdit;
+  final Function(int) onDelete;
+
+  AdminLoginPage(
+      {required this.profiles,
+      required this.onAdd,
+      required this.onEdit,
+      required this.onDelete});
+
+  @override
+  _AdminLoginPageState createState() => _AdminLoginPageState();
+}
+
+class _AdminLoginPageState extends State<AdminLoginPage> {
+  final userCtrl = TextEditingController();
+  final passCtrl = TextEditingController();
+  bool loggedIn = false;
+
+  void _checkLogin() {
+    if (userCtrl.text == "Manii@2022" && passCtrl.text == "Piyush@2009") {
+      setState(() => loggedIn = true);
+    } else {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text("Invalid credentials")));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!loggedIn) {
+      return Scaffold(
+        appBar: AppBar(title: Text("Admin Login")),
+        body: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: [
+              TextField(controller: userCtrl, decoration: InputDecoration(labelText: "Username")),
+              TextField(controller: passCtrl, obscureText: true, decoration: InputDecoration(labelText: "Password")),
+              SizedBox(height: 20),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: Color(0xFF9C27B0)),
+                onPressed: _checkLogin,
+                child: Text("Login", style: TextStyle(color: Colors.white)),
+              )
+            ],
+          ),
+        ),
+      );
+    }
+
+    return AdminPanel(
+      profiles: widget.profiles,
+      onAdd: widget.onAdd,
+      onEdit: widget.onEdit,
+      onDelete: widget.onDelete,
+    );
+  }
+}
+
+class AdminPanel extends StatelessWidget {
+  final List<Map<String, dynamic>> profiles;
+  final Function(Map<String, dynamic>) onAdd;
+  final Function(int, Map<String, dynamic>) onEdit;
+  final Function(int) onDelete;
+
+  AdminPanel(
+      {required this.profiles,
+      required this.onAdd,
+      required this.onEdit,
+      required this.onDelete});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text("Admin Panel")),
-      body: ListView.builder(
-        itemCount: profiles.length,
-        itemBuilder: (context, index) {
-          final profile = profiles[index];
-          return Card(
-            margin: EdgeInsets.all(8),
-            child: ListTile(
-              title: Text(profile["name"] ?? "Unnamed"),
-              subtitle: Text("Tap to edit"),
-              trailing: IconButton(
-                icon: Icon(Icons.delete, color: Colors.red),
-                onPressed: () => _deleteProfile(index),
+      body: ListView(
+        children: [
+          for (int i = 0; i < profiles.length; i++)
+            ListTile(
+              title: Text(profiles[i]["name"] ?? "Unnamed"),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                      icon: Icon(Icons.edit, color: Colors.blue),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => ProfileForm(
+                                  profile: profiles[i],
+                                  onSave: (data) => onEdit(i, data))),
+                        );
+                      }),
+                  IconButton(
+                      icon: Icon(Icons.delete, color: Colors.red),
+                      onPressed: () => onDelete(i)),
+                ],
               ),
-              onTap: () => _editProfile(index),
             ),
-          );
-        },
+        ],
       ),
-      floatingActionButton: FloatingActionButton(
-        child: Icon(Icons.add),
-        backgroundColor: Color(0xFF9C27B0),
-        onPressed: _addProfile,
-      ),
+      floatingActionButton: profiles.length < 10
+          ? FloatingActionButton(
+              backgroundColor: Color(0xFF9C27B0),
+              child: Icon(Icons.add),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) =>
+                          ProfileForm(onSave: (data) => onAdd(data))),
+                );
+              },
+            )
+          : null,
     );
   }
 }
 
-// =============== PROFILE FORM =================
 class ProfileForm extends StatefulWidget {
   final Map<String, dynamic>? profile;
   final Function(Map<String, dynamic>) onSave;
@@ -384,194 +533,51 @@ class ProfileForm extends StatefulWidget {
 }
 
 class _ProfileFormState extends State<ProfileForm> {
-  TextEditingController nameCtrl = TextEditingController();
-  TextEditingController postCtrl = TextEditingController();
-  List<Map<String, String>> entries = [];
+  final nameCtrl = TextEditingController();
+  final dailyCtrl = TextEditingController();
+  final contestCtrls = List.generate(8, (_) => TextEditingController());
 
   @override
   void initState() {
     super.initState();
     if (widget.profile != null) {
       nameCtrl.text = widget.profile!["name"] ?? "";
-      postCtrl.text = widget.profile!["postLink"] ?? "";
-      entries = List<Map<String, String>>.from(widget.profile!["entries"] ?? []);
+      dailyCtrl.text = widget.profile!["dailyPost"] ?? "";
+      for (int i = 0; i < 8; i++) {
+        contestCtrls[i].text = widget.profile!["contest${i + 1}"] ?? "";
+      }
     }
   }
 
-  void _addEntry() {
-    TextEditingController titleCtrl = TextEditingController();
-    TextEditingController linkCtrl = TextEditingController();
-    TextEditingController dateCtrl = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text("Add Contest Entry"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: titleCtrl, decoration: InputDecoration(labelText: "Title")),
-            TextField(controller: linkCtrl, decoration: InputDecoration(labelText: "Link")),
-            TextField(controller: dateCtrl, decoration: InputDecoration(labelText: "Date")),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: Text("Cancel")),
-          ElevatedButton(
-              child: Text("Save"),
-              onPressed: () {
-                setState(() {
-                  entries.add({"title": titleCtrl.text, "link": linkCtrl.text, "date": dateCtrl.text});
-                });
-                Navigator.pop(context);
-              }),
-        ],
-      ),
-    );
-  }
-
-  void _saveProfile() {
-    final profile = {
+  void _save() {
+    final data = {
       "name": nameCtrl.text,
-      "postLink": postCtrl.text,
-      "entries": entries,
+      "dailyPost": dailyCtrl.text,
+      for (int i = 0; i < 8; i++) "contest${i + 1}": contestCtrls[i].text,
     };
-    widget.onSave(profile);
+    widget.onSave(data);
     Navigator.pop(context);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.profile == null ? "Add Profile" : "Edit Profile")),
-      body: Padding(
-        padding: EdgeInsets.all(16),
-        child: Column(
-          children: [
-            TextField(controller: nameCtrl, decoration: InputDecoration(labelText: "Profile Name")),
-            TextField(controller: postCtrl, decoration: InputDecoration(labelText: "Daily Post Link")),
-            SizedBox(height: 10),
-            ElevatedButton.icon(
-              onPressed: _addEntry,
-              icon: Icon(Icons.add),
-              label: Text("Add Contest Entry"),
-              style: ElevatedButton.styleFrom(backgroundColor: Color(0xFF9C27B0)),
-            ),
-            Expanded(
-              child: ListView.builder(
-                itemCount: entries.length,
-                itemBuilder: (context, index) {
-                  final e = entries[index];
-                  return ListTile(
-                    title: Text(e["title"] ?? ""),
-                    subtitle: Text("As on ${e["date"]}"),
-                  );
-                },
-              ),
-            ),
-            ElevatedButton(
-              onPressed: _saveProfile,
-              child: Text("Save"),
-              style: ElevatedButton.styleFrom(backgroundColor: Color(0xFF9C27B0)),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ================= SOCIAL PAGE =================
-class SocialPage extends StatelessWidget {
-  final List<String> handles = [
-    "https://instagram.com/handle1",
-    "https://instagram.com/handle2",
-    "https://instagram.com/handle3",
-    "https://instagram.com/handle4",
-    "https://instagram.com/handle5",
-    "https://instagram.com/handle6",
-    "https://instagram.com/handle7",
-    "https://instagram.com/handle8",
-    "https://instagram.com/handle9",
-    "https://instagram.com/handle10",
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text("Follow us on Social Media")),
+      appBar: AppBar(title: Text("Profile Form")),
       body: ListView(
-        children: handles
-            .map((h) => ListTile(
-                  title: Text(h),
-                  onTap: () async {
-                    final url = Uri.parse(h);
-                    if (await canLaunchUrl(url)) launchUrl(url);
-                  },
-                ))
-            .toList(),
-      ),
-    );
-  }
-}
-
-// ================= WEBSITE PAGE =================
-class WebsitePage extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text("Swoofi Website")),
-      body: Center(
-        child: ElevatedButton(
-          onPressed: () async {
-            final url = Uri.parse("https://swoofi.app");
-            if (await canLaunchUrl(url)) launchUrl(url);
-          },
-          style: ElevatedButton.styleFrom(backgroundColor: Color(0xFF9C27B0)),
-          child: Text("Visit swoofi.app"),
-        ),
-      ),
-    );
-  }
-}
-
-// ================= RATE US PAGE =================
-class RateUsPage extends StatefulWidget {
-  @override
-  _RateUsPageState createState() => _RateUsPageState();
-}
-
-class _RateUsPageState extends State<RateUsPage> {
-  int rating = 0;
-  TextEditingController feedbackCtrl = TextEditingController();
-
-  void _submit() async {
-    final prefs = await SharedPreferences.getInstance();
-    prefs.setInt("rating", rating);
-    prefs.setString("feedback", feedbackCtrl.text);
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Thanks for your feedback!")));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text("Rate Us")),
-      body: Padding(
         padding: EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Text("How would you rate Swoofi?", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(5, (i) {
-                return IconButton(
-                  icon: Icon(Icons.star, color: i < rating ? Color(0xFF9C27B0) : Colors.grey),
-                  onPressed: () => setState(() => rating = i + 1),
-                );
-              }),
-            ),
-            TextField(controller: feedbackCtrl, decoration: InputDecoration(labelText: "Write feedback (optional)")),
-            SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _submit,
-              style: ElevatedButton.styleFrom(backgroundColor: Color(0xFF9C27B0)),
+        children: [
+          TextField(controller: nameCtrl, decoration: InputDecoration(labelText: "Name")),
+          TextField(controller: dailyCtrl, decoration: InputDecoration(labelText: "Daily Post Link")),
+          for (int i = 0; i < 8; i++)
+            TextField(controller: contestCtrls[i], decoration: InputDecoration(labelText: "Contest Entry ${i + 1}")),
+          SizedBox(height: 20),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Color(0xFF9C27B0)),
+            onPressed: _save,
+            child: Text("Save", style: TextStyle(color: Colors.white)),
+          )
+        ],
+      ),
+    );
+  }
+}
