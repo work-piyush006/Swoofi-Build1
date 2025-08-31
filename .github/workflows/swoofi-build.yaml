@@ -1,9 +1,10 @@
-name: Swoofi APK Build
+name: Flutter Build (v4 - Auto Android Create)
 
 on:
   push:
-    branches:
-      - main
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
   workflow_dispatch:
 
 jobs:
@@ -11,31 +12,31 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Repository checkout
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. Flutter setup
-      - name: Set up Flutter
+      - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.22.0'
+          channel: stable
 
-      # 3. Dependencies get
       - name: Install dependencies
         run: flutter pub get
 
-      # 4. Create android folder if empty
-      - name: Ensure android folder exists
+      # 🔹 Generate android/ ios/ folder if missing
+      - name: Create Android & iOS folder
         run: flutter create .
 
-      # 5. Build APK (release mode)
-      - name: Build release APK
+      # 🔹 Patch Android app name
+      - name: Patch Android App Name
+        run: |
+          sed -i 's/android:label="[^"]*"/android:label="Swoofi Support App"/g' android/app/src/main/AndroidManifest.xml
+
+      - name: Build Release APK
         run: flutter build apk --release
 
-      # 6. Upload build artifact (APK)
-      - name: Upload APK
+      - name: Upload APK (v4)
         uses: actions/upload-artifact@v4
         with:
-          name: swoofi-apk
+          name: release-apk
           path: build/app/outputs/flutter-apk/app-release.apk
